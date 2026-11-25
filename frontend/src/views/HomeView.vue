@@ -6,10 +6,12 @@ import logo from '@/assets/br-logo-white.svg'
 import EnvironmentPanel from '@/components/EnvironmentPanel.vue'
 import LocationPanel from '@/components/LocationPanel.vue'
 import PowerPanel from '@/components/PowerPanel.vue'
+import SeafloorPanel from '@/components/SeafloorPanel.vue'
 import StatusPanel from '@/components/StatusPanel.vue'
 import VehiclePanel from '@/components/VehiclePanel.vue'
 import { isSitl } from '@/composables/vehicleStatus'
 import { VehicleApi } from '@/services/api'
+import type { SitlLocation } from '@/types/sitl'
 
 const { showLoading, hideLoading } = useBlueLoading()
 const { notify } = useBlueSnackbar()
@@ -19,6 +21,7 @@ const vehiclePanel = ref<InstanceType<typeof VehiclePanel> | null>(null)
 const locationPanel = ref<InstanceType<typeof LocationPanel> | null>(null)
 const environmentPanel = ref<InstanceType<typeof EnvironmentPanel> | null>(null)
 const powerPanel = ref<InstanceType<typeof PowerPanel> | null>(null)
+const seafloorPanel = ref<InstanceType<typeof SeafloorPanel> | null>(null)
 const refreshing = ref(false)
 
 // Every panel reads everything it shows, lists included. One entry point rather than a
@@ -32,6 +35,7 @@ async function reloadAll(): Promise<void> {
     locationPanel.value?.reload(),
     environmentPanel.value?.reload(),
     powerPanel.value?.reload(),
+    seafloorPanel.value?.reload(),
   ])
 }
 
@@ -60,6 +64,15 @@ async function refreshAll(): Promise<void> {
   } finally {
     refreshing.value = false
   }
+}
+
+// A survey's starting point only fills the spawn form, the same as picking a spot on its map:
+// moving the vehicle there is the location panel's Apply, with the restart it costs.
+function onSeafloorSpawn(location: SitlLocation): void {
+  locationPanel.value?.setLocation(location)
+  notify('Filled the spawn location with where the survey started. Apply and restart to move the vehicle there.', {
+    severity: 'info',
+  })
 }
 
 // A gamepad's sticks rarely rest where ArduPilot's arming checks want them, and those checks
@@ -145,6 +158,17 @@ onMounted(async () => {
       :expanded="true"
     >
       <PowerPanel ref="powerPanel" />
+    </BlueExpansiblePanel>
+
+    <BlueExpansiblePanel
+      title="Virtual seafloor"
+      theme="dark"
+      :expanded="true"
+    >
+      <SeafloorPanel
+        ref="seafloorPanel"
+        @spawn="onSeafloorSpawn"
+      />
     </BlueExpansiblePanel>
   </BlueApp>
 </template>

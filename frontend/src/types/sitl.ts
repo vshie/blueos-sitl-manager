@@ -81,6 +81,58 @@ export interface LocationPreset extends PresetOrigin {
   location: SitlLocation
 }
 
+// A survey turned into a depth grid for the simulated sonar. Cell (row, col) is centred
+// col * cell_size m east and row * cell_size m north of the origin; row 0 is the southernmost.
+export interface Seafloor {
+  name: string
+  // File the survey came from.
+  source: string
+  origin_latitude: number
+  origin_longitude: number
+  cell_size: number
+  rows: number
+  cols: number
+  depth_min: number
+  depth_max: number
+  // Survey rows the grid was built from.
+  soundings: number
+  // Where the survey started, to spawn the vehicle at.
+  spawn: SitlLocation | null
+}
+
+// Base64 of rows * cols little-endian uint16 depths in cm, 65535 where there is no data.
+export interface SeafloorUpload extends Seafloor {
+  grid: string
+}
+
+export type SonarNoise = 'off' | 'realistic' | 'high'
+
+export interface SonarSettings {
+  enabled: boolean
+  seafloor: string | null
+  noise: SonarNoise
+}
+
+// The last sounding sent, and where it was taken.
+export interface SonarReading {
+  distance: number
+  confidence: number
+  // False when the beam found no seafloor: the vehicle is off the grid.
+  bottom: boolean
+  latitude: number
+  longitude: number
+}
+
+export interface SonarState {
+  settings: SonarSettings
+  reading: SonarReading | null
+  // False when RNGFND1 is not a MAVLink rangefinder, which takes a restart to change.
+  rangefinder_ready: boolean | null
+  // The autopilot is reporting the soundings on as its own.
+  autopilot_receiving: boolean
+  idle_reason: string | null
+}
+
 export interface VehicleStatus {
   board: string | null
   is_sitl: boolean

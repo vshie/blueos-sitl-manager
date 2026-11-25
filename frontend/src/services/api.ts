@@ -9,7 +9,11 @@ import type {
   LocationPreset,
   OperationResult,
   PowerSupply,
+  Seafloor,
+  SeafloorUpload,
   SitlLocation,
+  SonarSettings,
+  SonarState,
   VehiclePreset,
   VehicleStatus,
   VehicleType,
@@ -150,5 +154,36 @@ export const LocationApi = {
   },
   async deletePreset(name: string): Promise<OperationResult> {
     return (await api.delete<OperationResult>(`/location/presets/${encodeURIComponent(name)}`)).data
+  },
+}
+
+export const SeafloorApi = {
+  async library(): Promise<Seafloor[]> {
+    return (await api.get<Seafloor[]>('/seafloor/library')).data
+  },
+  // The depths as the backend stores them, for drawing a stored seafloor on the map.
+  async grid(name: string): Promise<Uint16Array> {
+    const response = await api.get<ArrayBuffer>(`/seafloor/library/${encodeURIComponent(name)}/grid`, {
+      responseType: 'arraybuffer',
+    })
+    return new Uint16Array(response.data)
+  },
+  async save(upload: SeafloorUpload): Promise<Seafloor> {
+    return (await api.post<Seafloor>('/seafloor/library', upload)).data
+  },
+  async rename(name: string, newName: string): Promise<Seafloor> {
+    return (await api.post<Seafloor>(`/seafloor/library/${encodeURIComponent(name)}/rename`, { name: newName })).data
+  },
+  async remove(name: string): Promise<OperationResult> {
+    return (await api.delete<OperationResult>(`/seafloor/library/${encodeURIComponent(name)}`)).data
+  },
+  // Carries the live reading along with the settings, so the panel polls one endpoint.
+  async sonar(): Promise<SonarState> {
+    return (await api.get<SonarState>('/seafloor/sonar')).data
+  },
+  // The first start restarts the autopilot so it takes the sonar as its rangefinder; callers
+  // show a loader for it.
+  async setSonar(settings: SonarSettings): Promise<OperationResult> {
+    return (await api.post<OperationResult>('/seafloor/sonar', settings)).data
   },
 }

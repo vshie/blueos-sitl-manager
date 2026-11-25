@@ -180,7 +180,14 @@ async function reload(): Promise<void> {
   await Promise.all([loadPresets(), refresh()])
 }
 
-defineExpose({ reload })
+// Fills the form from somewhere else on the page, a survey's starting point, leaving the user to
+// apply it like any other pick.
+function setLocation(next: SitlLocation): void {
+  location.value = { ...next }
+  chosenPresetName.value = ''
+}
+
+defineExpose({ reload, setLocation })
 
 function useBrowserLocation(): void {
   if (!navigator.geolocation) {
