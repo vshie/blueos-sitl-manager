@@ -36,6 +36,8 @@ Firmware page, the Parameter Editor and MAVProxy.
   real vehicle. The draw follows the BlueBoat's measured power curve and rises against a stream or
   a headwind, so the section is offered on the BlueBoat preset only. See below.
 - **Spawn location** — pick where SITL boots on a map, then apply. See below.
+- **Virtual seafloor** — load a Simple Ping Survey log and a simulated Ping sounds it as the
+  boat drives over it, so the survey extension, the autopilot and Cockpit all see depth. See below.
 
 <img width="1346" height="968" alt="image" src="https://github.com/user-attachments/assets/0cfa3129-3d68-4bc5-b73c-a6638ee69524" />
 
@@ -258,6 +260,59 @@ other preset the whole section is dimmed and inert, and the readings follow the 
 a preset that turns SITL into an ROV hands the simulator's own battery back within seconds. The
 pack stays stored as it was and is picked up again when a boat is.
 
+## Virtual seafloor
+
+A survey extension needs a seafloor under it to be tried out, and SITL has none: the boat floats
+on water with no bottom. This section gives it one, built from a survey that was really run, and
+puts a Ping under the hull that sounds it wherever the simulated boat goes.
+
+**Loading a survey.** Any log [Simple Ping Survey](https://github.com/vshie/pingSurvey) has
+written works, in any of its column layouts, and so does a made-up file in the same format. The
+browser does all of the processing, nothing of it reaching the vehicle but the finished grid:
+
+- Soundings the Ping was less than 90% sure of are left out, the same cut Simple Ping Survey maps
+  with, along with rows logged before a position fix. The threshold can be changed.
+- What is left is averaged into cells, by default the finest that keeps the grid under a million
+  of them, half a metre for a small survey and a metre for one a kilometre across.
+- A single-beam survey is depth along its tracks and nothing between them, so the soundings are
+  joined into triangles and each cell takes the depth across the one over it. Lines further apart
+  than **Fill gaps up to** (50 m by default, wide enough for most surveys' line spacing) are not
+  joined, which keeps open water outside the survey empty instead of bridged with a guess.
+
+The map previews the result as the options change, and saving stores it on the vehicle. Up to
+nine seafloors are kept, and **Use as spawn point** fills the spawn location with where the survey
+started, heading included, so the boat can be put back on the survey's first line.
+
+**The sonar.** **Sound the seafloor** makes the extension a Ping. BlueOS's Ping service hands each
+reading to mavlink2rest as a `DISTANCE_SENSOR` from component 194, Simple Ping Survey reads it
+from there, and the autopilot takes it as its rangefinder and reports it on to Cockpit. The
+simulated sonar sends the same message from the same component, ten times a second, so none of
+them can tell it from a real one: Simple Ping Survey logs it and draws it on Cockpit's map, and the
+autopilot logs it as it would at sea.
+
+Each reading is what a Ping2 would hear at the boat's position. Its 30 degree beam answers with the
+nearest seafloor anywhere in the cone rather than the depth straight below, so it reads a little
+short over a slope, and a hull rolling on the swell swings the cone to one side. A beam partly over
+the edge of the survey reports a confidence in proportion, and one wholly off it finds no bottom and
+says so the way a Ping does: the full 120 m range at 1% confidence. It keeps answering either way,
+because a rangefinder that falls silent stops the vehicle arming. **Noise** scatters the readings
+by the Ping2's 0.5% resolution, by 2% for a sonar working in poor conditions, or not at all.
+
+The autopilot needs its first rangefinder set to MAVLink to take the readings, the way a real
+BlueBoat is set up for its Ping: `RNGFND1_TYPE 10`, pointing down, good from 0.2 to 100 m.
+ArduPilot only creates a rangefinder when it boots, so switching the sonar on the first time
+restarts the autopilot; switching it off does not, since a rangefinder can be turned off while the
+autopilot runs. Applying a vehicle preset clears every rangefinder the preset does not name, so
+while the sonar is on, a boat preset carries the four parameters along with its own.
+
+The position comes from `GLOBAL_POSITION_INT`, carried forward along the boat's velocity between
+the few a second the autopilot sends, and kept in step with `SIM_SPEEDUP`. Simple Ping Survey logs
+twice a second of wall-clock time, so a speeded-up survey is a sparser one.
+
+The seafloors and the sonar's settings are kept in the extension's persistent volume, and the
+sonar starts again with the extension, because the autopilot is left waiting on a rangefinder only
+the extension feeds.
+
 ## Spawn location
 
 BlueOS used to start SITL with a fixed `--home` (Florianópolis, Brazil), which overrode
@@ -301,7 +356,8 @@ that would add one are greyed out. Long names ellipsize once the row grows wide,
 still fits without pushing the panel around.
 
 Saved presets are JSON files under the extension's persistent volume — `custom_presets` for
-vehicles, `custom_locations` for spawn points, `custom_environments` for ambient conditions — so
+vehicles, `custom_locations` for spawn points, `custom_environments` for ambient conditions,
+`seafloors` for seafloors, each beside its depth grid — so
 they survive extension updates and can be copied between vehicles by hand as well as through
 import and export.
 
@@ -309,7 +365,7 @@ import and export.
 
 ```
 Vue 3 + BlueVue frontend  ──>  FastAPI backend  ──>  host.docker.internal
-                                                        ├── /mavlink2rest      (params, position)
+                                                        ├── /mavlink2rest      (params, position, sonar)
                                                         └── /ardupilot-manager (frame, firmware, restart)
 ```
 
