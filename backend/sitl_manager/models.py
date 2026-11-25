@@ -108,6 +108,69 @@ class LocationPreset(NamedPreset):
     location: Location
 
 
+class Seafloor(NamedPreset):
+    """A depth survey turned into a grid the simulated sonar can sound.
+
+    The browser builds it from a Simple Ping Survey log, so the depths are what that Ping
+    measured below its transducer. The grid is laid out in metres on a flat projection around
+    its first cell: cell (row, col) is centred ``col * cell_size`` east and ``row * cell_size``
+    north of the origin, row 0 being the southernmost, with a degree of latitude taken as
+    ``METERS_PER_DEGREE`` and a degree of longitude as that times the origin's cos(latitude).
+    """
+
+    source: str = Field("", description="File the survey came from")
+    origin_latitude: float = Field(..., ge=-90, le=90, description="Centre of the south-west cell")
+    origin_longitude: float = Field(..., ge=-180, le=180, description="Centre of the south-west cell")
+    cell_size: float = Field(..., gt=0, le=100, description="Metres between cell centres")
+    rows: int = Field(..., ge=1)
+    cols: int = Field(..., ge=1)
+    depth_min: float = Field(..., ge=0, description="Shallowest cell, m")
+    depth_max: float = Field(..., ge=0, description="Deepest cell, m")
+    soundings: int = Field(0, ge=0, description="Survey rows the grid was built from")
+    spawn: Optional[Location] = Field(None, description="Where the survey started, to spawn the vehicle at")
+
+
+class SeafloorUpload(Seafloor):
+    grid: str = Field(
+        ...,
+        description="Base64 of rows*cols little-endian uint16 depths in cm, row by row from the south, 65535 = no data",
+    )
+
+
+class SonarNoise(str, Enum):
+    OFF = "off"
+    REALISTIC = "realistic"
+    HIGH = "high"
+
+
+class SonarSettings(BaseModel):
+    """Whether the simulated sonar is sounding, and which seafloor it sounds."""
+
+    enabled: bool = False
+    seafloor: Optional[str] = Field(None, description="Name of the seafloor the sonar sounds")
+    noise: SonarNoise = SonarNoise.REALISTIC
+
+
+class SonarReading(BaseModel):
+    """The last sounding the simulated sonar sent, and where it was taken."""
+
+    distance: float = Field(..., description="Range sent to the autopilot, m")
+    confidence: int = Field(..., ge=0, le=100)
+    bottom: bool = Field(..., description="False when the beam found no seafloor, i.e. the vehicle is off the grid")
+    latitude: float
+    longitude: float
+
+
+class SonarState(BaseModel):
+    settings: SonarSettings
+    reading: Optional[SonarReading] = None
+    # None until the autopilot has been asked. False means RNGFND1 is not a MAVLink rangefinder,
+    # which only a restart can change, so the autopilot is not taking the soundings yet.
+    rangefinder_ready: Optional[bool] = None
+    autopilot_receiving: bool = Field(False, description="The autopilot is re-reporting the soundings as its own")
+    idle_reason: Optional[str] = Field(None, description="Why an enabled sonar is not sounding")
+
+
 class Vehicle(str, Enum):
     SUB = "Sub"
     ROVER = "Rover"

@@ -76,6 +76,10 @@ class PresetStore(Generic[PresetT]):
             logger.warning(f"Ignoring invalid preset {path.name}: {error}")
             return None
 
+    def sidecar(self, name: str, suffix: str) -> Path:
+        """A file kept beside a preset's own under the same slug, for data too big for its JSON."""
+        return self._path(name).with_suffix(suffix)
+
     def has(self, name: str) -> bool:
         return self._path(name).is_file()
 

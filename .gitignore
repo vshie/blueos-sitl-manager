@@ -16,6 +16,8 @@ backend/sitl_manager/data/custom_presets/
 backend/sitl_manager/data/custom_locations/
 backend/sitl_manager/data/custom_environments/
 backend/sitl_manager/data/battery_pack.json
+backend/sitl_manager/data/seafloors/
+backend/sitl_manager/data/sonar.json
 
 # Editors / OS
 .DS_Store

@@ -15,7 +15,7 @@ from typing import Awaitable, Callable, Dict, NamedTuple, Optional, Set, Tuple
 
 from loguru import logger
 
-from sitl_manager import autopilot, mavlink
+from sitl_manager import autopilot, mavlink, seafloor
 from sitl_manager.models import (
     ApplyJob,
     ApplyStep,
@@ -431,6 +431,11 @@ async def _stage_parameters(job: ApplyJob, request: "_Request", progress: "_Prog
     # configuration rather than only with a preset: parameter storage starts empty after an
     # install, and what ArduPilot defaults to there is what stops a vehicle arming on a gamepad.
     params = {**request.params, **_carried, **SITL_RC_ARMING}
+    # The simulated sonar's rangefinder rides along too, for the same reason: a preset clears every
+    # rangefinder it does not name, and the sonar would otherwise need a restart of its own after
+    # this one. Only for a boat, since a boat's survey is all the sonar sounds.
+    if _expected_vehicle_type(request.vehicle, request.params) == seafloor.BOAT:
+        params.update(seafloor.rangefinder_params())
     progress.written = await _apply_params(job, params, clear_unclaimed=request.from_preset)
 
 

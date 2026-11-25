@@ -47,6 +47,14 @@ POWER_PACK_FILE = Path(
     os.environ.get("SITL_POWER_PACK_FILE", str(Path(__file__).resolve().parent / "data" / "battery_pack.json"))
 )
 
+# Seafloors the simulated sonar can sound, one metadata file and one depth grid per seafloor.
+SEAFLOOR_DIR = Path(os.environ.get("SITL_SEAFLOOR_DIR", str(Path(__file__).resolve().parent / "data" / "seafloors")))
+
+# Whether the simulated sonar is sounding and which seafloor, kept like the battery pack: the
+# autopilot is left configured for a rangefinder that only this service feeds, so the sonar has
+# to be taken up again after a restart or the vehicle refuses to arm for want of its data.
+SONAR_FILE = Path(os.environ.get("SITL_SONAR_FILE", str(Path(__file__).resolve().parent / "data" / "sonar.json")))
+
 # The spawn location BlueOS ships as SIM_OPOS_* defaults (Florianópolis, Brazil). Stored
 # parameter values take precedence over those defaults, which is what lets the location
 # panel move the spawn point. Also used as a fallback when a parameter cannot be read.

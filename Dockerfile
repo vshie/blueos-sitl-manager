@@ -34,6 +34,10 @@ ENV SITL_CUSTOM_ENVIRONMENTS_DIR=/app/persistent/custom_environments
 # The simulated battery pack, kept here so an update does not leave the vehicle reporting a pack
 # the extension no longer knows it is driving.
 ENV SITL_POWER_PACK_FILE=/app/persistent/battery_pack.json
+# Seafloors the simulated sonar sounds, and whether it is sounding: the autopilot is left waiting
+# on a rangefinder only this service feeds, so the sonar has to come back after an update.
+ENV SITL_SEAFLOOR_DIR=/app/persistent/seafloors
+ENV SITL_SONAR_FILE=/app/persistent/sonar.json
 
 LABEL version="0.3.3"
 

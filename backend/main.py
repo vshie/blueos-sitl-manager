@@ -9,10 +9,11 @@ from fastapi_versioning import VersionedFastAPI
 from loguru import logger
 from uvicorn import Config, Server
 
-from sitl_manager import __version__, power
+from sitl_manager import __version__, power, seafloor
 from sitl_manager.api.v1.routers.environment import environment_router
 from sitl_manager.api.v1.routers.location import location_router
 from sitl_manager.api.v1.routers.power import power_router
+from sitl_manager.api.v1.routers.seafloor import seafloor_router
 from sitl_manager.api.v1.routers.vehicle import vehicle_router
 from sitl_manager.http import close_session
 from sitl_manager.settings import PORT, SERVICE_NAME, STATIC_DIR
@@ -22,11 +23,12 @@ logger.info("Starting SITL Manager")
 
 fast_api_app = FastAPI(
     title="SITL Manager API",
-    description="Configure vehicle type, ambient conditions and location of a BlueOS SITL vehicle.",
+    description="Configure vehicle type, ambient conditions, location and seafloor of a BlueOS SITL vehicle.",
 )
 fast_api_app.include_router(environment_router)
 fast_api_app.include_router(location_router)
 fast_api_app.include_router(power_router)
+fast_api_app.include_router(seafloor_router)
 fast_api_app.include_router(vehicle_router)
 
 app = VersionedFastAPI(fast_api_app, version="1.0.0", prefix_format="/v{major}.{minor}", enable_latest=True)
@@ -51,11 +53,13 @@ def register_service() -> Dict[str, Any]:
 @app.on_event("startup")
 async def _on_startup() -> None:
     await power.resume()
+    await seafloor.resume()
 
 
 @app.on_event("shutdown")
 async def _on_shutdown() -> None:
     await power.shutdown()
+    await seafloor.shutdown()
     await close_session()
 
 
