@@ -396,19 +396,71 @@ yarn build    # outputs to dist/, copied into the image as /app/static
 
 The image is built and published by the GitHub workflow in
 `.github/workflows/deploy.yml`, which uses the
-[BlueOS Extension Deployment Action](https://github.com/BlueOS-community/Deploy-BlueOS-Extension).
-Configure these repository secrets/variables: `DOCKER_USERNAME`, `DOCKER_PASSWORD`,
-`MY_NAME`, `MY_EMAIL`, `ORG_NAME`, `ORG_EMAIL`.
+[BlueOS Extension Deployment Action](https://github.com/BlueOS-community/Deploy-BlueOS-Extension)
+and runs on every push. It needs the repository secrets `DOCKER_USERNAME` and `DOCKER_PASSWORD`;
+the variables `MY_NAME`, `MY_EMAIL`, `ORG_NAME` and `ORG_EMAIL` are optional, since the image's
+author labels come from the `Dockerfile`. A fork has its workflows switched off until they are
+enabled on its Actions tab. Each build is tagged with the branch or tag it was built from.
 
-To test manually, in BlueOS → **Extensions Manager → +** and enter:
+### Manual install
 
-| Field | Value |
-|-------|-------|
-| Identifier | `<dockeruser>.sitl-manager` |
-| Name | `SITL Manager` |
-| Docker image | `<dockeruser>/blueos-sitl-manager` |
-| Docker tag | the branch or version tag you built |
-| Permissions | the contents of the `permissions` label in the `Dockerfile` |
+In BlueOS, open **Extensions Manager**, press **+**, and fill in the fields below. The values are
+for the published image; for one built from a fork, put your Docker Hub user in place of
+`armanzoli` in the first and third, and the branch you built as the tag.
+
+Only run one SITL Manager at a time: two would each drive the simulated battery and sonar of the
+same autopilot. Disable or remove an installed one first. A new one picks up the presets,
+seafloors and settings the old one left, since both keep them in the same folder on the vehicle.
+
+**Extension Identifier**
+
+```
+armanzoli.sitl-manager
+```
+
+**Extension Name**
+
+```
+SITL Manager
+```
+
+**Docker image**
+
+```
+armanzoli/blueos-sitl-manager
+```
+
+**Docker tag**
+
+```
+main
+```
+
+**Permissions**, in the JSON editor below the tag (the `permissions` label in the `Dockerfile`)
+
+```json
+{
+  "ExposedPorts": {
+    "80/tcp": {}
+  },
+  "HostConfig": {
+    "Binds": [
+      "/usr/blueos/extensions/sitl-manager:/app/persistent"
+    ],
+    "ExtraHosts": [
+      "host.docker.internal:host-gateway"
+    ],
+    "PortBindings": {
+      "80/tcp": [
+        {
+          "HostPort": ""
+        }
+      ]
+    },
+    "Memory": 104857600
+  }
+}
+```
 
 ## License
 
